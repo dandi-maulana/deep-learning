@@ -74,8 +74,9 @@ D = Discriminator().to(device)
 criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 lr = 0.001  # Learning rate
 
-optimizerG = optim.SGD(G.parameters(), lr=lr)  # Optimizer for Generator
-optimizerD = optim.SGD(D.parameters(), lr=lr)  # Optimizer for Discriminator
+# Using Adam optimizer for both Generator and Discriminator
+optimizerG = optim.RMSprop(G.parameters(), lr=lr)  # Optimizer for Generator
+optimizerD = optim.RMSprop(D.parameters(), lr=lr)  # Optimizer for Discriminator
 
 # Training Process
 epochs = 10
@@ -111,21 +112,22 @@ for epoch in range(epochs):
         output = D(fake)  # Discriminator output for fake images
         loss_G = criterion(output, label_real)  # Target: pretend fake images are real
         loss_G.backward()  # Backpropagation
-        optimizerG.step()  # Update Generator
-
-        # === Logging ===
+        optimizerG.step()
+        
+                # === Logging ===
         if i % 200 == 0:
-                print(f"[{epoch+1}/{epochs}] Batch {i}/{len(dataloader)} \
-                Loss_D: {loss_D.item():.4f}, Loss_G: {loss_G.item():.4f}")
+            print(f"[{epoch+1}/{epochs}] Batch {i}/{len(dataloader)} "
+                  f"Loss_D: {loss_D.item():.4f}, Loss_G: {loss_G.item():.4f}")
 
-    # Display intermediate results
+    # Display intermediate generated images after each epoch
     with torch.no_grad():
         fake_images = G(fixed_noise).detach().cpu()  # Generate images from fixed noise
-    grid = vutils.make_grid(fake_images, padding=2, normalize=True)  # Create a grid of images
-    plt.imshow(np.transpose(grid, (1, 2, 0)))  # Transpose for correct image format
-    plt.title(f"Epoch {epoch+1} GAN with Linear Layers")  # Title for the plot
-    plt.show()  # Show the generated images
+    grid = vutils.make_grid(fake_images, padding=2, normalize=True)  # Create grid of images
+    plt.imshow(np.transpose(grid, (1, 2, 0)))  # Transpose image axes for matplotlib
+    plt.title(f"Epoch {epoch+1} GAN with Linear Layers")
+    plt.show()
 
-elapsed_time1 = time.time() - start_time1  # Calculate elapsed time
-elapsed_time1 = elapsed_time1 / 60  # Convert to minutes
+# Calculate and print total training time
+elapsed_time1 = time.time() - start_time1
+elapsed_time1 = elapsed_time1 / 60  # Convert time to minutes
 print(f'Total training time for GAN with Linear Layers = {elapsed_time1:.2f} minutes')
