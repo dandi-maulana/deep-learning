@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-import torchvision.models as models
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
@@ -17,33 +16,33 @@ import numpy as np
 import os
 from PIL import Image
 
-# Lokasi dataset dan folder penyimpanan label
+# Location of the dataset and label storage folder
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 # Load Dataset ---
-data_dir = r"C:\deep_learning\dataset\flower-dataset"  # Ganti dengan path dataset kamu
+data_dir = r"C:\deep_learning\dataset\flower-dataset"  # Change to your dataset path
 train_dir = os.path.join(data_dir, "train")
 val_dir = os.path.join(data_dir, "test")
 
-#Transformasi yang akan diterapkan pada dataset
+# Transformations to be applied to the dataset
 transform = transforms.Compose([
-    transforms.Resize((32, 32)),  # Mengubah ukuran gambar menjadi 32x32 piksel
-    transforms.ToTensor(),  # Mengbah gambar menjadi tensor
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalisasi gambar
+    transforms.Resize((32, 32)),  # Resize images to 32x32 pixels
+    transforms.ToTensor(),  # Convert images to tensor
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize images
 ])
 
-
+# Load datasets
 train_dataset = datasets.ImageFolder(root=train_dir, transform=transform)
 val_dataset = datasets.ImageFolder(root=val_dir, transform=transform)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-# Ukuran batch pelatihan
+# Batch size for training
 batch_size = 64
 
-# Definisi arsitektur model CNN
+# Define CNN architecture
 class CNN(nn.Module):
     def __init__(self, num_classes=5):
         super(CNN, self).__init__()
@@ -56,77 +55,77 @@ class CNN(nn.Module):
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.relu3 = nn.ReLU()
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc = nn.Linear(64 * 4 * 4, num_classes)
+        self.fc = nn.Linear(64 * 4 * 4, num_classes)  # Fully connected layer
 
     def forward(self, x):
         x = self.pool1(self.relu1(self.conv1(x)))
         x = self.pool2(self.relu2(self.conv2(x)))
         x = self.pool3(self.relu3(self.conv3(x)))
-        x = x.view(-1, 64 * 4 * 4)
-        x = self.fc(x)
+        x = x.view(-1, 64 * 4 * 4)  # Flatten the tensor
+        x = self.fc(x)  # Fully connected layer
         return x
 
-# Inisialisasi model
+# Initialize model
 model = CNN()
 
-# Fungsi loss dan optimizer
-criterion = nn.CrossEntropyLoss()
+# Loss function and optimizer
+criterion = nn.CrossEntropyLoss()  # Cross-entropy loss for multi-class classification
 optimizer = optim.AdamW(model.parameters(), lr=0.001, betas=(0.9, 0.999),
-                        eps=1e-8, weight_decay= 1e-2, amsgrad= False)
+                        eps=1e-8, weight_decay=1e-2, amsgrad=False)
 
-# Jumlah epoch
+# Number of epochs
 num_epochs = 50
 
-# Pelatihan model
+# Training the model
 train_losses, val_losses = [], []
 train_accs, val_accs = [], []
 
 for epoch in range(num_epochs):
-    model.train()
+    model.train()  # Set model to training mode
     running_loss, correct, total = 0.0, 0, 0
     
     for inputs, labels in train_loader:
         inputs, labels = inputs.to(device), labels.to(device)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        optimizer.zero_grad()  # Zero the gradients
+        outputs = model(inputs)  # Forward pass
+        loss = criterion(outputs, labels)  # Compute loss
+        loss.backward()  # Backpropagation
+        optimizer.step()  # Update weights
         
         running_loss += loss.item()
-        _, predicted = torch.max(outputs, 1)
+        _, predicted = torch.max(outputs, 1)  # Get predicted classes
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
     
-    train_loss = running_loss / len(train_loader)
-    train_acc = 100 * correct / total
+    train_loss = running_loss / len(train_loader)  # Average training loss
+    train_acc = 100 * correct / total  # Training accuracy
     train_losses.append(train_loss)
     train_accs.append(train_acc)
 
-# Evaluasi
-    model.eval()
+        # Evaluation
+    model.eval()  # Set model to evaluation mode
     running_loss, correct, total = 0.0, 0, 0
-    with torch.no_grad():
+    with torch.no_grad():  # Disable gradient calculation
         for inputs, labels in val_loader:
             inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            outputs = model(inputs)  # Forward pass
+            loss = criterion(outputs, labels)  # Compute loss
             running_loss += loss.item()
-            _, predicted = torch.max(outputs, 1)
+            _, predicted = torch.max(outputs, 1)  # Get predicted classes
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     
-    val_loss = running_loss / len(val_loader)
-    val_acc = 100 * correct / total
+    val_loss = running_loss / len(val_loader)  # Average validation loss
+    val_acc = 100 * correct / total  # Validation accuracy
     val_losses.append(val_loss)
     val_accs.append(val_acc)
     
     print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
 
-# Simpan Model ---
+# Save Model ---
 torch.save(model.state_dict(), "CNN1.pth")
 
-# Plot Loss & Akurasi ---
+# Plot Loss & Accuracy ---
 plt.figure(figsize=(12, 5))
 
 # Plot Loss
@@ -139,7 +138,7 @@ plt.title("Training & Validation Loss")
 plt.legend()
 plt.grid()
 
-# Plot Akurasi
+# Plot Accuracy
 plt.subplot(1, 2, 2)
 plt.plot(range(1, num_epochs+1), train_accs, label="Train Accuracy")
 plt.plot(range(1, num_epochs+1), val_accs, label="Validation Accuracy")
@@ -151,7 +150,7 @@ plt.grid()
 
 plt.show()
 
-# Evaluasi Model (Confusion Matrix & Classification Report) ---
+# Model Evaluation (Confusion Matrix & Classification Report) ---
 model.eval()
 true_labels, pred_labels = [], []
 
@@ -163,7 +162,7 @@ with torch.no_grad():
         true_labels.extend(labels.cpu().numpy())
         pred_labels.extend(predicted.cpu().numpy())
 
-# ✅ Periksa apakah `true_labels` dan `pred_labels` memiliki panjang yang sama
+# Check if true_labels and pred_labels have the same length
 if len(true_labels) > 0 and len(pred_labels) > 0 and len(true_labels) == len(pred_labels):
     # --- Confusion Matrix ---
     cm = confusion_matrix(true_labels, pred_labels)
@@ -178,5 +177,4 @@ if len(true_labels) > 0 and len(pred_labels) > 0 and len(true_labels) == len(pre
     print("Classification Report:\n")
     print(classification_report(true_labels, pred_labels, target_names=train_dataset.classes))
 else:
-    print("⚠️ ERROR: Tidak ada data yang diproses dalam validasi! Periksa DataLoader dan dataset.")
-
+    print("⚠️ ERROR: No data processed in validation! Check DataLoader and dataset.")
